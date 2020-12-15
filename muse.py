@@ -89,20 +89,25 @@ SPP_UUID = '00001101-0000-1000-8000-00805F9B34FB'
 def _encode_command(cmd : str):
     return [len(cmd) + 1, *(ord(char) for char in cmd), ord('\n')]
 
+print('importing ...')
 import bt_bluezero
 import json
+import threading
 iface = bt_bluezero.interfaces()[0]
 print('scanning for muses ...')
 devices = None
+devices_found_event = threading.Event()
 def update(devlist):
     global devices
     devices = [mac for mac, name in devlist if mac.startswith(MUSE_MAC_PREFIX)]
     if len(devices):
         print('found {}'.format(devices))
-        iface.stop_scanning()
-        bt_bluezero.stop_pump()
+        devices_found_event.set()
+    else:
+        print('... no muses yet, {} other devices ...'.format(len(devlist)))
 iface.start_scanning(update)
-bt_bluezero.pump()
+devices_found_event.wait()
+iface.stop_scanning()
 
 print('connecting to {} ...'.format(devices[0]))
 device = bt_bluezero.LEDevice(iface, devices[0])
@@ -281,11 +286,13 @@ class Ctrl:
         self._data += data
         if self._data[-1] == b'}'[0]:
             self._recvd.append(json.loads(self._data))
-            bt_bluezero.stop_pump()
+            self._resultevent.set()
             self._data = b''
     def send(self, data : str):
+        print('SERIAL ->', data)
+        self._resultevent = threading.Event()
         self._gatt.write(bytes([len(data) + 1, *(ord(character) for character in data), ord('\n')]))
-        bt_bluezero.pump()
+        self._resultevent.wait()
         result = self._recvd.pop(0)
         if result['rc'] == 0:
             return result
@@ -306,6 +313,7 @@ ctrl = Ctrl(device)
 
 #accel = bt_bluezero.Characteristic(device, PRIMARY_SERVICE, ACCELEROMETER_CHARACTERISTIC)
 #accel.subscribe(lambda data: print('accel', data))
+print('sending control stop command; if things freeze command sequence may need improvement')
 print(ctrl.send('h')) # stop streaming
 print(ctrl.send('v1')) # version, maybe protocol version?
 print(ctrl.send('p63')) # preset

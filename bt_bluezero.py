@@ -7,17 +7,37 @@ import bluezero.async_tools
 import bluezero.dbus_tools
 import bluezero.constants
 
+import threading
 import time
 
 def interfaces():
     return [Interface(mac) for mac in bluezero.adapter.list_adapters()]
 
-_pumploop = bluezero.async_tools.EventLoop()
-def pump():
-    _pumploop.run()
-    
-def stop_pump():
-    _pumploop.quit()
+class PumpThread:
+    def __init__(self):
+        self._pumploop = bluezero.async_tools.EventLoop()
+        self._lock = threading.Lock()
+        self._counter = 0
+    def add_needed(self):
+        with self._lock:
+            if self._counter == 0:
+                threading.Thread(target=self.run,name='bluezero gobject pump').start()
+            self._counter += 1
+    def remove_needed(self):
+        with self._lock:
+            self._counter -= 1
+            if self._counter < 0:
+                raise AssertionError('threading release without initialisation')
+            if self._counter == 0:
+                self.stop()
+    def run(self):
+        print('bluezero pump starting')
+        self._pumploop.run()
+        print('bluezero pump stopped')
+    def stop(self):
+        print('bluezero pump stopping')
+        self._pumploop.quit()
+_pump = PumpThread()
 
 class Interface:
     def __init__(self, mac):
@@ -32,9 +52,13 @@ class Interface:
                 callback(self.near_addresses())
                 return False
             self._adapter.on_device_found = on_device_found
-            _pumploop.add_timer(1, on_device_found)       
+        _pump.add_needed() # not sure if this is needed with no callback, but atm it is uncalled in stop_scanning
+        if callback:
+            _pump._pumploop.add_timer(1, on_device_found) # recurs at this many ms until returns False
+    
 
     def stop_scanning(self):
+        _pump.remove_needed()
         self._adapter.stop_discovery()
 
     def near_addresses(self):
@@ -67,10 +91,14 @@ class Characteristic:
                 callback(bytes(changed['Value']))
             else:
                 print(f'iface:{iface}, changed:{changed}, invalidated:{invalidated}')
+        print('bluezero characteristic subscription')
         self._gatt.add_characteristic_cb(handoff)
         self._gatt.start_notify()
+        _pump.add_needed()
     def unsubscribe(self):
+        print('bluezero characteristic unsubscription')
         self._gatt.stop_notify()
+        _pump.remove_needed()
     def write(self, data : bytes):
         self._gatt.value = list(data)
 
