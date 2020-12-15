@@ -1,3 +1,13 @@
+sqrt(heartbrain)
+
+your brain is a big heart!
+
+stupid robots break my brain?
+
+you can use numbers to talk about it if you want.
+
+i needz lovebrain for heal community!
+
 This software, like the human mind, is a community effort.
 
 This means that if you use it, it is your responsibility to learn how to

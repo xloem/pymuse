@@ -55,7 +55,6 @@ class Interface:
         _pump.add_needed() # not sure if this is needed with no callback, but atm it is uncalled in stop_scanning
         if callback:
             _pump._pumploop.add_timer(1, on_device_found) # recurs at this many ms until returns False
-    
 
     def stop_scanning(self):
         _pump.remove_needed()
