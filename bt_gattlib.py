@@ -1,5 +1,7 @@
 import gattlib.adapter
 import gattlib.device
+from gi.repository import GLib
+from uuid import UUID
 
 from threading import Semaphore, Thread
 
@@ -14,6 +16,21 @@ class Interface:
         self._devices = {}
         self._addrs = []
         self._adapter.open()
+        self._glibloop = None
+
+    def _pump(self):
+        if self._glibloop == None:
+            self._glibloop = GLib.MainLoop()
+            self._pumpthread = Thread(target=self._glibloop.run)
+            self._pumpthread.start()
+
+    def _stop(self):
+        if self._glibloop != None:
+            self._glibloop.quit()
+            self._pumpthread.join()
+
+    def __del__(self):
+        self._stop()
 
     def start_scanning(self, callback = None):
         self._devices = []
@@ -75,6 +92,7 @@ class LEDevice:
         print('discovering')
         self._device.discover()
         print('discovered')
+        interface._pump()
     def __del__(self):
         if self._device:
             device = self._device
@@ -98,7 +116,7 @@ class Characteristic:
         for key, value in self._device._device.characteristics.items():
             print(str(key), str(value))
         for characteristic in self._device._device.characteristics.values():
-            if str(characteristic.uuid) == uuid:
+            if characteristic.uuid == UUID(uuid):
                 if self._characteristic is not None:
                     raise AssertionError('todo: characteristics with matching uuids')
                 self._characteristic = characteristic
@@ -115,13 +133,15 @@ class Characteristic:
         print('subscribe!')
         self._subscribees.add(callback)
         self._characteristic.notification_start()  
-    def unsubscribe():
+    def unsubscribe(self):
         self._subscribees.clear()
         self._characteristic.notification_stop()
     def write(self, data : bytes):
         print('write!', data)
-        for byte in data:
-            self._characteristic.write(bytes(byte,))
+        self._characteristic.write(data)
+    def __del__(self):
+        if len(self._subscribees):
+            self.unsubscribe()
 
 _interface = Interface()
 

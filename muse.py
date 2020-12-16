@@ -243,7 +243,7 @@ class Telemetry:
         self._gatt.subscribe(self._recv)
     def _recv(self, data : bytes):
         seq = int.from_bytes(data[0:2], 'big', signed=False)
-        # battery is expected to contain a mv fold, an adc mv field, a data enabled flag, a percentage remaining
+        # battery is expected to contain a mv field, an adc mv field, a data enabled flag, a percentage remaining
         batt = Fraction(int.from_bytes(data[2:4], 'big', signed=False), 512)
         fuelgaugemv = Fraction(int.from_bytes(data[4:6], 'big', signed=False) * 10, 22)
         adcmv_maybe = int.from_bytes(data[6:8], 'big', signed=False)
@@ -259,7 +259,9 @@ class Telemetry:
 
 class Ctrl:
     def __init__(self, device):
+        #input('a')
         self._gatt = device.characteristic(PRIMARY_SERVICE, GATT_CHARACTERISTIC_UUIDS['SERIAL'])
+        #input('b')
         self._data = b''
         self._recvd = []
         self._gatt.subscribe(self._recv)
@@ -306,7 +308,10 @@ class Ctrl:
             raise ValueError('invalid command', data, result, ['FAILURE','TIMEOUT','OVERLOADED','UNIMPLEMENTED'][result['rc']-1])
     #def recv(self):
     #    return self.data.pop(0)
+
+#input('1')
 ctrl = Ctrl(device)
+#input('2')
 
 # *1   boot to headset state
 # h    stop streaming / halt
@@ -344,4 +349,4 @@ eeg = Bits12(device, 'SIGNAL_FP2')
 #    if name.startswith('SIGNAL_') or name == 'DRL_REF'
 #}
 print(ctrl.send('d')) # start streaming
-bt_bluezero.pump()
+#bt_bluezero.pump()
