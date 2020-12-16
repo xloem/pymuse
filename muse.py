@@ -90,28 +90,33 @@ def _encode_command(cmd : str):
     return [len(cmd) + 1, *(ord(char) for char in cmd), ord('\n')]
 
 print('importing ...')
-import bt_bluezero
+import bt_gattlib as bt
 import json
 import threading
-iface = bt_bluezero.interfaces()[0]
+iface = bt.interfaces()[0]
 print('scanning for muses ...')
 devices = None
-devices_found_event = threading.Event()
 def update(devlist):
     global devices
     devices = [mac for mac, name in devlist if mac.startswith(MUSE_MAC_PREFIX)]
+    print('found {} devices starting with {}: {}'.format(len(devices), MUSE_MAC_PREFIX, devices))
+    # --> in this connect v-- call i seem to be getting another call to update(), i suppose from a new thread.  they keep blocking in the connect call.  probably don't want that; if we did we wouldn't want all of them in the same thing
+    devices = [iface.device(mac) for mac in devices]
+    devices = [device for device in devices if device]
+    print('able to connect to {} of them: {}'.format(len(devices), devices))
+    #devices = [device for device in (iface.device(mac) for mac, name in devlist if mac.startswith(MUSE_MAC_PREFIX)) if device]
     if len(devices):
-        print('found {}'.format(devices))
-        devices_found_event.set()
+        print('found')
+        print('found {}'.format([device.info() for device in devices]))
+        iface.stop_scanning()
     else:
-        print('... no muses yet, {} other devices ...'.format(len(devlist)))
+        print('... no connectable muses yet, {} other devices ... {}'.format(len(devlist), devlist))
 iface.start_scanning(update)
-devices_found_event.wait()
-iface.stop_scanning()
 
-print('connecting to {} ...'.format(devices[0]))
-device = bt_bluezero.LEDevice(iface, devices[0])
-print('connected')
+#print('connecting to {} ...'.format(devices[0]))
+#device = bt.LEDevice(iface, devices[0])
+device = devices[0]
+print('connected to {}'.format(device.info()))
 
 from fractions import Fraction
 
@@ -314,8 +319,8 @@ ctrl = Ctrl(device)
 #accel = bt_bluezero.Characteristic(device, PRIMARY_SERVICE, ACCELEROMETER_CHARACTERISTIC)
 #accel.subscribe(lambda data: print('accel', data))
 print('sending control stop command; if things freeze command sequence may need improvement')
-print(ctrl.send('h')) # stop streaming
 print(ctrl.send('v1')) # version, maybe protocol version?
+print(ctrl.send('h')) # stop streaming
 print(ctrl.send('p63')) # preset
 #print(ctrl.send('s')) # status
 print(ctrl.status())
