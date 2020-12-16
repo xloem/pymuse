@@ -1,5 +1,7 @@
 import gattlib.adapter
 import gattlib.device
+from gi.repository import GLib
+from uuid import UUID
 
 from threading import Semaphore, Thread
 
@@ -14,6 +16,13 @@ class Interface:
         self._devices = {}
         self._addrs = []
         self._adapter.open()
+        self._glibloop = GLib.MainLoop()
+        self._pumpthread = Thread(target=self._glibloop.run)
+        self._pumpthread.start()
+
+    def __del__(self):
+        self._glibloop.quit()
+        self._pumpthread.join()
 
     def start_scanning(self, callback = None):
         self._devices = []
@@ -98,7 +107,7 @@ class Characteristic:
         for key, value in self._device._device.characteristics.items():
             print(str(key), str(value))
         for characteristic in self._device._device.characteristics.values():
-            if str(characteristic.uuid) == uuid:
+            if characteristic.uuid == UUID(uuid):
                 if self._characteristic is not None:
                     raise AssertionError('todo: characteristics with matching uuids')
                 self._characteristic = characteristic
