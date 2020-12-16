@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
 
-from gattlib import *
-from gattlib.adapter import *
-from gattlib.device import *
-from gattlib.uuid import *
-import sys
-from gi.repository import GLib
-import signal
-from threading import Thread
-
 MUSE_MAC_PREFIX = '00:55:DA:'
 PRIMARY_SERVICE = '0000fe8d-0000-1000-8000-00805f9b34fb'
 CHARACTERISTIC_UUID_TEMPLATE = '273e00{}-4c4d-454d-96be-f03bac821358'
@@ -48,17 +39,31 @@ GATT_CHARACTERISTIC_UUIDS = {
 }
 
 
+from gattlib import *
+from gattlib.adapter import *
+from gattlib.device import *
+from gattlib.uuid import *
+import sys
+from gi.repository import GLib
+import signal
+from threading import Thread
+import bt_gattlib
+
 def main():
     argv=[sys.argv[0], MUSE_MAC_PREFIX + 'BB:1C:52', GATT_CHARACTERISTIC_UUIDS['SERIAL'], GATT_CHARACTERISTIC_UUIDS['SERIAL'], '0376310a']
     notify_uuid = UUID(argv[2])
     if len(argv) > 3:
         write_uuid = UUID(argv[3])
 
-    loop = GLib.MainLoop()
-    thread = Thread(target=loop.run)
-    thread.start()
+    interface = bt_gattlib.interfaces()[0]
 
-    adapter = Adapter()
+    #loop = GLib.MainLoop()
+    #thread = Thread(target=loop.run)
+    #thread.start()
+    loop = interface._glibloop
+    thread = interface._pumpthread
+
+    adapter = interface._adapter #Adapter()
     device = Device(adapter, argv[1])
     
     device.connect()
