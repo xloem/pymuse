@@ -35,11 +35,11 @@
 #   PRESET_50; # these all worked on my muse S
 #   PRESET_51;
 #   PRESET_52;
-#   PRESET_53;   # this ones places it into a different runstate, maybe bootloaderish
+#   PRESET_53;   # this one places it into a different runstate, maybe bootloaderish
 #   PRESET_60;
 #   PRESET_61;
 #   PRESET_63;
-#   PRESET_AB; # muse 1, reseach
+#   PRESET_AB; # muse 1, research
 #   PRESET_AD;
 # }
 
@@ -302,8 +302,8 @@ class Ctrl:
     #    return self.data.pop(0)
 
 import json
-print('scanning for muses ...')
 async def main():
+    print('scanning for muses ...')
     iface = (await bt.interfaces())[0]
 
     devices = None
@@ -370,5 +370,5 @@ async def main():
     print(await ctrl.send('d')) # start streaming
     await asyncio.sleep(1)
     #bt_bluezero.pump()
-        
-asyncio.get_event_loop().run_until_complete(main())
+if __name__ == '__main__':        
+    asyncio.get_event_loop().run_until_complete(main())
