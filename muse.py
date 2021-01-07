@@ -90,29 +90,31 @@ def _encode_command(cmd : str):
     return [len(cmd) + 1, *(ord(char) for char in cmd), ord('\n')]
 
 print('importing ...')
-import bt_gattlib as bt
+import bt_bleak as bt
 import json
 import threading
 iface = bt.interfaces()[0]
 print('scanning for muses ...')
 devices = None
 def update(devlist):
+    print('UPDATE')
     global devices
     devices = [mac for mac, name in devlist if mac.startswith(MUSE_MAC_PREFIX)]
     print('found {} devices starting with {}: {}'.format(len(devices), MUSE_MAC_PREFIX, devices))
-    # --> in this connect v-- call i seem to be getting another call to update(), i suppose from a new thread.  they keep blocking in the connect call.  probably don't want that; if we did we wouldn't want all of them in the same thing
-    devices = [iface.device(mac) for mac in devices]
-    devices = [device for device in devices if device]
-    print('able to connect to {} of them: {}'.format(len(devices), devices))
+    #devices = [iface.device(mac) for mac in devices]
+    #devices = [device for device in devices if device]
+    #print('able to connect to {} of them: {}'.format(len(devices), devices))
     #devices = [device for device in (iface.device(mac) for mac, name in devlist if mac.startswith(MUSE_MAC_PREFIX)) if device]
     if len(devices):
         print('found')
-        print('found {}'.format([device.info() for device in devices]))
         iface.stop_scanning()
     else:
         print('... no connectable muses yet, {} other devices ... {}'.format(len(devlist), devlist))
 iface.start_scanning(update)
 
+devices = [iface.device(mac) for mac in devices]
+devices = [device for device in devices if device]
+print('found {}'.format([device.info() for device in devices]))
 #print('connecting to {} ...'.format(devices[0]))
 #device = bt.LEDevice(iface, devices[0])
 device = devices[0]
@@ -259,9 +261,7 @@ class Telemetry:
 
 class Ctrl:
     def __init__(self, device):
-        #input('a')
         self._gatt = device.characteristic(PRIMARY_SERVICE, GATT_CHARACTERISTIC_UUIDS['SERIAL'])
-        #input('b')
         self._data = b''
         self._recvd = []
         self._gatt.subscribe(self._recv)
@@ -309,9 +309,7 @@ class Ctrl:
     #def recv(self):
     #    return self.data.pop(0)
 
-#input('1')
 ctrl = Ctrl(device)
-#input('2')
 
 # *1   boot to headset state
 # h    stop streaming / halt
