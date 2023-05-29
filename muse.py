@@ -43,6 +43,9 @@
 #   PRESET_AD;
 # }
 
+# imu info from the 2016 tech spec pdf:
+# ACCELEROMETER Three-axis @ 52Hz, 16 bit resolution, range +/ - 4G
+# GYROSCOPE +/- 1000 degrees per second
 
 # muse 2, btle gatt
 MUSE_MAC_PREFIX = '00:55:DA:'
@@ -201,6 +204,8 @@ class Gyroscope(Imu):
             # i'm not sure where this decimal comes from.
             # it's in the muse-js source code.  it doesn't multiply out to an integral
             # number of degrees, or units per 16-bit value, or anything.
+            # if the full signed 16-bit range is used, them deg/sec might be 0.030517578125 here
+            #  for the 2016 muse?
         super().__init__(device, 'gyroscope', GATT_CHARACTERISTIC_UUIDS['GYRO'], Fraction(0.0074768))
         
 class ChannelProbe:
